@@ -10,12 +10,22 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <link rel="stylesheet" href="style.css">
 
+  <style>
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in-up {
+      animation: fadeInUp 0.8s ease-out forwards;
+    }
+  </style>
   
 </head>
 
 <body class="min-h-screen p-6 bg-gray-900 text-white">
 
-<div class="max-w-7xl mx-auto">
+<!-- Tambahkan class animate-fade-in-up pada bekas utama ini -->
+<div class="max-w-7xl mx-auto animate-fade-in-up">
 
   <div class="mb-8">
     <h1 class="text-4xl font-bold text-yellow-400">
