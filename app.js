@@ -305,6 +305,11 @@ form.addEventListener("submit", async (e) => {
     catatan: catatanInput.value.trim(),
   };
 
+  // Animasi Loading pada Butang
+  submitButton.disabled = true;
+  submitButton.innerHTML = `<svg class="animate-spin h-5 w-5 mr-2 inline-block text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Menyimpan...`;
+  submitButton.classList.add("opacity-75", "cursor-not-allowed");
+
   try {
 
     // UPDATE MODE
@@ -336,6 +341,11 @@ form.addEventListener("submit", async (e) => {
     console.error(error);
     showToast("Ralat berlaku semasa menyimpan data.", "error");
 
+  } finally {
+    // Mengembalikan butang kepada keadaan asal sama ada berjaya atau ralat
+    submitButton.disabled = false;
+    submitButton.classList.remove("opacity-75", "cursor-not-allowed");
+    submitButton.innerText = editId ? "Update Persembahan" : "Simpan Persembahan";
   }
 
 });
@@ -585,6 +595,22 @@ function cancelEdit() {
 }
 
 // =========================
+// STATUS RANGKAIAN (NETWORK)
+// =========================
+
+window.addEventListener('offline', () => {
+  showToast("Sambungan internet terputus. Mod luar talian...", "error");
+});
+
+window.addEventListener('online', () => {
+  showToast("Internet kembali! Menyegarkan halaman...", "success");
+  // Muat semula halaman secara automatik selepas 2 saat untuk memastikan data terkini
+  setTimeout(() => {
+    window.location.reload();
+  }, 2000);
+});
+
+// =========================
 // DELETE FUNCTION
 // =========================
 
@@ -617,3 +643,27 @@ async function executeDelete() {
   
   closeDeleteModal();
 }
+
+// =========================
+// JAM REAL-TIME (WAKTU SEMASA)
+// =========================
+
+function updateClock() {
+  const clockElement = document.getElementById("realtimeClock");
+  if (!clockElement) return;
+
+  const now = new Date();
+  const timeString = now.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  });
+  
+  const dateString = now.toLocaleDateString('ms-MY', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  clockElement.innerText = `${dateString} • ${timeString}`;
+}
+
+setInterval(updateClock, 1000);
+updateClock(); // Init panggil terus supaya tidak melengahkan paparan
