@@ -181,8 +181,6 @@ function renderList() {
     
     currentExportList = []; // Kosongkan senarai eksport sebelum melukis (render) yang baharu
 
-    document.getElementById("totalPersembahan").innerText = allPerformances.length;
-
     // Salin array asal supaya kita tidak mengganggu susunan asal dari Firebase
     let listToRender = [...allPerformances];
 
@@ -192,10 +190,6 @@ function renderList() {
     }
 
     listToRender.forEach((item) => {
-
-      totalPesilat += (item.pesilat || 0); 
-      if (item.perguruan) perguruanSet.add(item.perguruan);
-      if (item.kategori) kategoriSet.add(item.kategori);
 
       // Fungsi Tapisan (Filter)
       if (searchQuery) {
@@ -207,6 +201,11 @@ function renderList() {
           return; // Langkau item (jangan lukis) jika tidak padan dengan mana-mana carian
         }
       }
+
+      // Lakukan pengiraan HANYA JIKA item melepasi tapisan carian di atas
+      totalPesilat += (item.pesilat || 0); 
+      if (item.perguruan) perguruanSet.add(item.perguruan);
+      if (item.kategori) kategoriSet.add(item.kategori);
 
       // Hanya masukkan item yang melepasi tapisan carian ke dalam senarai eksport
       currentExportList.push(item);
@@ -279,6 +278,7 @@ function renderList() {
     } else {
       list.innerHTML = htmlContent;
     }
+    document.getElementById("totalPersembahan").innerText = renderedCount;
     document.getElementById("totalPesilat").innerText = totalPesilat;
     document.getElementById("totalPerguruan").innerText = perguruanSet.size;
     document.getElementById("totalKategori").innerText = kategoriSet.size;
