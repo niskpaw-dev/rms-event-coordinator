@@ -685,7 +685,15 @@ function updateClock() {
     hour12: true
   });
   
-  const dateString = now.toLocaleDateString('ms-MY', { day: 'numeric', month: 'long', year: 'numeric' });
+  const days = ['Ahad', 'Isnin', 'Selasa', 'Rabu', 'Khamis', 'Jumaat', 'Sabtu'];
+  const months = ['Jan', 'Feb', 'Mac', 'Apr', 'Mei', 'Jun', 'Jul', 'Ogo', 'Sep', 'Okt', 'Nov', 'Dis'];
+  
+  const dayName = days[now.getDay()];
+  const day = String(now.getDate()).padStart(2, '0');
+  const monthName = months[now.getMonth()];
+  const year = now.getFullYear();
+  
+  const dateString = `${dayName}, ${day} ${monthName} ${year}`;
 
   clockElement.innerText = `${dateString} • ${timeString}`;
 }
