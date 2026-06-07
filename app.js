@@ -424,56 +424,40 @@ function renderList() {
       }
 
       htmlContent += `
-        <div class="glass rounded-xl md:rounded-2xl p-4 md:p-5 h-full ${borderStyle} hover:scale-[1.02] hover:shadow-2xl transition-all duration-300">
+        <div class="glass rounded-xl md:rounded-2xl p-4 md:p-5 h-full ${borderStyle} hover:scale-[1.02] hover:shadow-2xl transition-all duration-300 flex flex-col justify-between">
 
-          <div class="flex flex-col sm:flex-row justify-between items-start gap-3 md:gap-4">
+          <div>
+            <h3 class="text-lg md:text-xl font-bold text-yellow-400 leading-tight mb-1">
+              ${escapeHTML(item.perguruan)}
+            </h3>
 
-            <div class="w-full">
+            <p class="text-gray-300 text-sm md:text-base flex items-center gap-1.5 mb-3 md:mb-4">
+              <span class="text-gray-500">👤 Guru:</span> <span class="font-medium">${escapeHTML(item.guru)}</span>
+            </p>
 
-              <h3 class="text-lg md:text-xl font-bold text-yellow-400 leading-tight">
-                ${escapeHTML(item.perguruan)}
-              </h3>
-
-              <p class="text-gray-300 mt-1 text-sm md:text-base">
-                Guru: ${escapeHTML(item.guru)}
-              </p>
-
-              <div class="flex gap-1.5 md:gap-2 mt-2 md:mt-3 flex-wrap">
-
-                ${pillsHtml}
-
-                <span class="bg-yellow-500 text-black px-2.5 py-1 rounded-full text-xs md:text-sm font-bold">
-                  ${item.pesilat || 0} Pesilat
-                </span>
-
-              </div>
-
-              ${
-                item.catatan
-                ? `<p class="text-gray-400 mt-2.5 md:mt-3 text-sm">${escapeHTML(item.catatan)}</p>`
-                : ""
-              }
-
+            <div class="flex gap-1.5 md:gap-2 flex-wrap items-center">
+              ${pillsHtml}
+              <span class="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 px-2.5 py-1 rounded-full text-xs md:text-sm font-bold flex items-center gap-1.5">
+                👥 ${item.pesilat || 0} Pesilat
+              </span>
             </div>
 
-            <div class="flex flex-row sm:flex-col gap-2 w-full sm:w-auto mt-3 sm:mt-0">
+            ${
+              item.catatan
+              ? `<div class="mt-3 md:mt-4 p-3 bg-black/20 rounded-lg border border-gray-700/50">
+                   <p class="text-gray-400 text-xs md:text-sm italic">"${escapeHTML(item.catatan)}"</p>
+                 </div>`
+              : ""
+            }
+          </div>
 
-              <button
-                onclick="editPerformance('${item.id}')"
-                class="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-500 px-3 py-1.5 md:py-2 rounded-lg text-sm font-medium transition"
-              >
-                Edit
-              </button>
-
-              <button
-                onclick="deletePerformance('${item.id}')"
-                class="flex-1 sm:flex-none bg-red-700 hover:bg-red-600 px-3 py-1.5 md:py-2 rounded-lg text-sm font-medium transition"
-              >
-                Delete
-              </button>
-
-            </div>
-
+          <div class="flex gap-2 mt-4 md:mt-5 pt-4 border-t border-gray-700/50">
+            <button onclick="editPerformance('${item.id}')" class="flex-1 bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white border border-blue-500/20 hover:border-transparent px-3 py-1.5 md:py-2 rounded-lg text-sm font-medium transition duration-300 flex items-center justify-center gap-1.5">
+              ✏️ Edit
+            </button>
+            <button onclick="deletePerformance('${item.id}')" class="flex-1 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/20 hover:border-transparent px-3 py-1.5 md:py-2 rounded-lg text-sm font-medium transition duration-300 flex items-center justify-center gap-1.5">
+              🗑️ Padam
+            </button>
           </div>
 
         </div>
