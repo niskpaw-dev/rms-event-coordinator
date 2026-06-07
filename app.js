@@ -3,7 +3,6 @@ const list = document.getElementById("performanceList");
 
 const guruInput = document.getElementById("guru");
 const perguruanInput = document.getElementById("perguruan");
-const kategoriInput = document.getElementById("kategori");
 const pesilatInput = document.getElementById("pesilat");
 const catatanInput = document.getElementById("catatan");
 
@@ -61,21 +60,46 @@ if (sortOption) {
 // KATEGORI DINAMIK
 // =========================
 
-kategoriInput.addEventListener("change", (e) => {
-  if (e.target.value === "ADD_NEW") {
-    const newCategory = prompt("Sila masukkan nama kategori baru:");
-    
-    if (newCategory && newCategory.trim() !== "") {
-      const newOption = document.createElement("option");
-      newOption.value = newCategory.trim();
-      newOption.textContent = newCategory.trim();
-      kategoriInput.insertBefore(newOption, kategoriInput.lastElementChild);
-      kategoriInput.value = newOption.value; // Terus pilih kategori baru ini
-    } else {
-      kategoriInput.value = ""; // Reset jika pengguna batal
+let availableCategories = ["Seni Tari", "Tempur Kosong", "Tempur Belantan", "Tempur Parang", "Tempur Keris", "Lompatan Harimau", "Lompatan Gelung Api", "Pecah Genting"];
+
+function renderCategoryCheckboxes() {
+  const container = document.getElementById("kategoriCheckboxes");
+  if (!container) return;
+  
+  const checkedBoxes = Array.from(document.querySelectorAll('input[name="kategori"]:checked')).map(cb => cb.value);
+  container.innerHTML = "";
+  
+  availableCategories.forEach(cat => {
+    const isChecked = checkedBoxes.includes(cat) ? "checked" : "";
+    container.innerHTML += `
+      <label class="flex items-start gap-2 cursor-pointer group">
+        <input type="checkbox" name="kategori" value="${escapeHTML(cat)}" class="mt-1 w-4 h-4 rounded border-gray-600 bg-gray-700 text-yellow-500 focus:ring-yellow-500 focus:ring-offset-gray-900" ${isChecked}>
+        <span class="text-sm md:text-base text-gray-300 group-hover:text-white transition leading-tight">${escapeHTML(cat)}</span>
+      </label>
+    `;
+  });
+}
+
+function addNewCategoryForm() {
+  const newCategory = prompt("Sila masukkan nama kategori baru:");
+  if (newCategory && newCategory.trim() !== "") {
+    const clean = newCategory.trim();
+    if (!availableCategories.includes(clean)) {
+      availableCategories.push(clean);
+      renderCategoryCheckboxes();
     }
+    setTimeout(() => {
+      const allCb = Array.from(document.querySelectorAll('input[name="kategori"]'));
+      const cb = allCb.find(c => c.value === clean);
+      if (cb) {
+         cb.checked = true;
+         document.getElementById('kategoriError').classList.add('hidden');
+      }
+    }, 10);
   }
-});
+}
+
+renderCategoryCheckboxes(); // Init
 
 // =========================
 // URUS KATEGORI (MODAL)
@@ -85,14 +109,11 @@ function openCategoryModal() {
   const catList = document.getElementById("categoryList");
   catList.innerHTML = "";
   
-  // Ambil semua pilihan kategori yang sah (kecuali kosong dan ADD_NEW)
-  const options = Array.from(kategoriInput.options).filter(opt => opt.value !== "" && opt.value !== "ADD_NEW");
   
-  if (options.length === 0) {
+  if (availableCategories.length === 0) {
     catList.innerHTML = `<p class="text-gray-400 text-sm">Tiada kategori dijumpai.</p>`;
   } else {
-    options.forEach(opt => {
-      const catName = opt.value;
+    availableCategories.forEach(catName => {
       catList.innerHTML += `
         <div class="flex justify-between items-center bg-black/30 p-3 rounded-lg border border-gray-700">
           <span class="font-medium text-sm md:text-base">${escapeHTML(catName)}</span>
@@ -119,14 +140,30 @@ async function editCategoryName(oldName) {
   const finalName = newName.trim();
 
   try {
-    const snapshot = await db.collection("performances").where("kategori", "==", oldName).get();
-    if (!snapshot.empty) {
-      const batch = db.batch();
-      snapshot.forEach(doc => {
-        batch.update(doc.ref, { kategori: finalName });
-      });
-      await batch.commit();
-    }
+    const batch = db.batch();
+    let hasUpdates = false;
+
+    // 1. Array format
+    const snapshotArr = await db.collection("performances").where("kategori", "array-contains", oldName).get();
+    snapshotArr.forEach(doc => {
+      let data = doc.data();
+      let newCats = data.kategori.map(c => c === oldName ? finalName : c);
+      batch.update(doc.ref, { kategori: newCats });
+      hasUpdates = true;
+    });
+
+    // 2. String format (legacy)
+    const snapshotStr = await db.collection("performances").where("kategori", "==", oldName).get();
+    snapshotStr.forEach(doc => {
+      batch.update(doc.ref, { kategori: [finalName] });
+      hasUpdates = true;
+    });
+
+    if (hasUpdates) await batch.commit();
+
+    const idx = availableCategories.indexOf(oldName);
+    if (idx !== -1) availableCategories[idx] = finalName;
+    renderCategoryCheckboxes();
 
     showToast("Kategori berjaya dikemaskini.", "success");
     openCategoryModal(); // Segarkan senarai
@@ -141,18 +178,27 @@ async function deleteCategoryName(oldName) {
   if (!confirmDel) return;
 
   try {
-    const snapshot = await db.collection("performances").where("kategori", "==", oldName).get();
-    if (!snapshot.empty) {
-      const batch = db.batch();
-      snapshot.forEach(doc => {
-        batch.update(doc.ref, { kategori: "" }); // Dikosongkan di dalam DB
-      });
-      await batch.commit();
-    }
+    const batch = db.batch();
+    let hasUpdates = false;
 
-    // Padam dari dropdown (hanya berkesan kepada kategori non-default / hardcoded)
-    const optionToRemove = Array.from(kategoriInput.options).find(opt => opt.value === oldName);
-    if (optionToRemove) optionToRemove.remove();
+    const snapshotArr = await db.collection("performances").where("kategori", "array-contains", oldName).get();
+    snapshotArr.forEach(doc => {
+      let data = doc.data();
+      let newCats = data.kategori.filter(c => c !== oldName);
+      batch.update(doc.ref, { kategori: newCats });
+      hasUpdates = true;
+    });
+
+    const snapshotStr = await db.collection("performances").where("kategori", "==", oldName).get();
+    snapshotStr.forEach(doc => {
+      batch.update(doc.ref, { kategori: [] });
+      hasUpdates = true;
+    });
+
+    if (hasUpdates) await batch.commit();
+
+    availableCategories = availableCategories.filter(c => c !== oldName);
+    renderCategoryCheckboxes();
 
     showToast("Kategori berjaya dipadam.", "success");
     openCategoryModal(); // Segarkan senarai
@@ -224,10 +270,18 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
+  const checkedBoxes = Array.from(document.querySelectorAll('input[name="kategori"]:checked')).map(cb => cb.value);
+  if (checkedBoxes.length === 0) {
+    document.getElementById('kategoriError').classList.remove('hidden');
+    return;
+  } else {
+    document.getElementById('kategoriError').classList.add('hidden');
+  }
+
   const data = {
     guru: toTitleCase(guruInput.value.trim()),
     perguruan: toTitleCase(perguruanInput.value.trim()),
-    kategori: kategoriInput.value,
+    kategori: checkedBoxes,
     pesilat: jumlahPesilat,
     catatan: catatanInput.value.trim(),
   };
@@ -254,6 +308,7 @@ form.addEventListener("submit", async (e) => {
 
       showToast("Persembahan berjaya ditambah.", "success");
       form.reset();
+      document.querySelectorAll('input[name="kategori"]').forEach(cb => cb.checked = false);
 
     }
 
@@ -311,11 +366,14 @@ function renderList() {
 
     listToRender.forEach((item) => {
 
+      // Tangani format array (baru) atau string (legacy)
+      let cats = Array.isArray(item.kategori) ? item.kategori : (item.kategori ? [item.kategori] : []);
+
       // Fungsi Tapisan (Filter)
       if (searchQuery) {
         const matchPerguruan = item.perguruan && item.perguruan.toLowerCase().includes(searchQuery);
         const matchGuru = item.guru && item.guru.toLowerCase().includes(searchQuery);
-        const matchKategori = item.kategori && item.kategori.toLowerCase().includes(searchQuery);
+        const matchKategori = cats.some(c => c.toLowerCase().includes(searchQuery));
         
         if (!matchPerguruan && !matchGuru && !matchKategori) {
           return; // Langkau item (jangan lukis) jika tidak padan dengan mana-mana carian
@@ -325,16 +383,24 @@ function renderList() {
       // Lakukan pengiraan HANYA JIKA item melepasi tapisan carian di atas
       totalPesilat += (item.pesilat || 0); 
       if (item.perguruan) perguruanSet.add(item.perguruan);
-      if (item.kategori) kategoriSet.add(item.kategori);
+      cats.forEach(c => kategoriSet.add(c));
 
       // Hanya masukkan item yang melepasi tapisan carian ke dalam senarai eksport
       currentExportList.push(item);
       renderedCount++;
 
-      const styles = getCategoryStyles(item.kategori);
+      const borderStyle = cats.length > 0 ? getCategoryStyles(cats[0]).border : "border-l-4 border-gray-500";
+      let pillsHtml = cats.map(c => {
+         const styles = getCategoryStyles(c);
+         return `<span class="${styles.pill} px-2.5 py-1 rounded-full text-xs md:text-sm text-white">${escapeHTML(c)}</span>`;
+      }).join("");
+      
+      if (cats.length === 0) {
+         pillsHtml = `<span class="bg-gray-600 px-2.5 py-1 rounded-full text-xs md:text-sm text-white">Tiada Kategori</span>`;
+      }
 
       htmlContent += `
-        <div class="glass rounded-xl md:rounded-2xl p-4 md:p-5 h-full ${styles.border} hover:scale-[1.02] hover:shadow-2xl transition-all duration-300">
+        <div class="glass rounded-xl md:rounded-2xl p-4 md:p-5 h-full ${borderStyle} hover:scale-[1.02] hover:shadow-2xl transition-all duration-300">
 
           <div class="flex flex-col sm:flex-row justify-between items-start gap-3 md:gap-4">
 
@@ -350,9 +416,7 @@ function renderList() {
 
               <div class="flex gap-1.5 md:gap-2 mt-2 md:mt-3 flex-wrap">
 
-                <span class="${styles.pill} px-2.5 py-1 rounded-full text-xs md:text-sm text-white">
-                  ${escapeHTML(item.kategori)}
-                </span>
+                ${pillsHtml}
 
                 <span class="bg-yellow-500 text-black px-2.5 py-1 rounded-full text-xs md:text-sm font-bold">
                   ${item.pesilat || 0} Pesilat
@@ -414,16 +478,15 @@ function renderList() {
     document.getElementById("totalPerguruan").innerText = perguruanSet.size;
     document.getElementById("totalKategori").innerText = kategoriSet.size;
 
-    // Pastikan semua kategori sejarah dari database dimasukkan ke dalam dropdown
+    // Pastikan semua kategori sejarah dari database dimasukkan ke dalam senarai checkbox
+    let addedNew = false;
     kategoriSet.forEach(kat => {
-      const exists = Array.from(kategoriInput.options).some(opt => opt.value === kat);
-      if (!exists && kat.trim() !== "") {
-        const newOption = document.createElement("option");
-        newOption.value = kat;
-        newOption.textContent = kat;
-        kategoriInput.insertBefore(newOption, kategoriInput.lastElementChild); // Letak atas butang tambah
+      if (!availableCategories.includes(kat) && kat.trim() !== "") {
+        availableCategories.push(kat);
+        addedNew = true;
       }
     });
+    if (addedNew) renderCategoryCheckboxes();
 
 }
 
@@ -445,10 +508,13 @@ function exportToCSV() {
 
   // Masukkan data setiap persembahan berdasarkan senarai semasa yang dipaparkan
   currentExportList.forEach(item => {
+    let cats = Array.isArray(item.kategori) ? item.kategori : (item.kategori ? [item.kategori] : []);
+    let catString = cats.join(", ");
+
     const row = [
       `"${(item.perguruan || "").replace(/"/g, '""')}"`,
       `"${(item.guru || "").replace(/"/g, '""')}"`,
-      `"${(item.kategori || "").replace(/"/g, '""')}"`,
+      `"${catString.replace(/"/g, '""')}"`,
       item.pesilat || 0,
       `"${(item.catatan || "").replace(/"/g, '""')}"`
     ];
@@ -481,9 +547,14 @@ function editPerformance(id) {
 
   guruInput.value = item.guru;
   perguruanInput.value = item.perguruan;
-  kategoriInput.value = item.kategori;
   pesilatInput.value = item.pesilat;
   catatanInput.value = item.catatan || "";
+
+  let cats = Array.isArray(item.kategori) ? item.kategori : (item.kategori ? [item.kategori] : []);
+  document.querySelectorAll('input[name="kategori"]').forEach(cb => {
+    cb.checked = cats.includes(cb.value);
+  });
+  document.getElementById('kategoriError').classList.add('hidden');
 
   submitButton.innerText = "Update Persembahan";
   cancelBtn.classList.remove("hidden");
@@ -498,6 +569,8 @@ function editPerformance(id) {
 function cancelEdit() {
   editId = null;
   form.reset();
+  document.querySelectorAll('input[name="kategori"]').forEach(cb => cb.checked = false);
+  document.getElementById('kategoriError').classList.add('hidden');
   submitButton.innerText = "Simpan Persembahan";
   cancelBtn.classList.add("hidden");
 }

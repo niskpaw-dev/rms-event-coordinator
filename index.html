@@ -76,32 +76,19 @@
           required
         />
 
-        <div class="flex gap-2 w-full">
-          <select
-            id="kategori"
-            class="flex-1 bg-black/40 border border-gray-700 rounded-lg md:rounded-xl p-2.5 md:p-3 text-sm md:text-base"
-            required
-          >
-            <option value="">Pilih Kategori</option>
-            <option>Seni Tari</option>
-            <option>Tempur Kosong</option>
-            <option>Tempur Belantan</option>
-            <option>Tempur Parang</option>
-            <option>Tempur Keris</option>
-            <option>Lompatan Harimau</option>
-            <option>Lompatan Gelung Api</option>
-            <option>Pecah Genting</option>
-            <option value="ADD_NEW" class="font-bold text-yellow-500">➕ Tambah Kategori Baru...</option>
-          </select>
-          <button
-            type="button"
-            onclick="openCategoryModal()"
-            class="bg-gray-700 hover:bg-gray-600 px-3 md:px-4 rounded-lg md:rounded-xl transition text-white border border-gray-600 flex items-center justify-center"
-            title="Urus Kategori"
-          >
-            ⚙️
-          </button>
+      <div class="w-full bg-black/40 border border-gray-700 rounded-lg md:rounded-xl p-3">
+        <div class="flex justify-between items-center mb-3">
+          <label class="text-sm md:text-base text-gray-300 font-medium">Pilih Kategori <span class="text-red-500">*</span></label>
+          <div class="flex gap-3">
+            <button type="button" onclick="addNewCategoryForm()" class="text-yellow-500 hover:text-yellow-400 text-xs md:text-sm font-bold transition">➕ Tambah</button>
+            <button type="button" onclick="openCategoryModal()" class="text-gray-400 hover:text-white text-xs md:text-sm font-bold transition">⚙️ Urus</button>
+          </div>
         </div>
+        <div id="kategoriCheckboxes" class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+          <!-- Checkboxes dijana oleh JavaScript -->
+        </div>
+        <p id="kategoriError" class="text-red-500 text-xs mt-2 hidden">Sila pilih sekurang-kurangnya satu kategori.</p>
+      </div>
 
         <input
           type="number"
