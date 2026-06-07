@@ -18,10 +18,31 @@ let currentExportList = []; // Menyimpan senarai yang telah ditapis & disusun un
 let searchQuery = "";
 
 const searchInput = document.getElementById("searchPerguruan");
+const clearSearchBtn = document.getElementById("clearSearchBtn");
+
 if (searchInput) {
   searchInput.addEventListener("input", (e) => {
     searchQuery = e.target.value.toLowerCase();
+    
+    // Tunjuk/sorok butang clear berdasarkan nilai input
+    if (clearSearchBtn) {
+      if (searchQuery.length > 0) {
+        clearSearchBtn.classList.remove("hidden");
+      } else {
+        clearSearchBtn.classList.add("hidden");
+      }
+    }
+
     renderList(); // Kemaskini paparan setiap kali pengguna menaip
+  });
+}
+
+if (clearSearchBtn) {
+  clearSearchBtn.addEventListener("click", () => {
+    searchInput.value = "";
+    searchQuery = "";
+    clearSearchBtn.classList.add("hidden"); // Sorokkan butang semula
+    renderList(); // Kemaskini semula paparan (reset)
   });
 }
 
@@ -51,6 +72,91 @@ kategoriInput.addEventListener("change", (e) => {
     }
   }
 });
+
+// =========================
+// URUS KATEGORI (MODAL)
+// =========================
+
+function openCategoryModal() {
+  const catList = document.getElementById("categoryList");
+  catList.innerHTML = "";
+  
+  // Ambil semua pilihan kategori yang sah (kecuali kosong dan ADD_NEW)
+  const options = Array.from(kategoriInput.options).filter(opt => opt.value !== "" && opt.value !== "ADD_NEW");
+  
+  if (options.length === 0) {
+    catList.innerHTML = `<p class="text-gray-400 text-sm">Tiada kategori dijumpai.</p>`;
+  } else {
+    options.forEach(opt => {
+      const catName = opt.value;
+      catList.innerHTML += `
+        <div class="flex justify-between items-center bg-black/30 p-3 rounded-lg border border-gray-700">
+          <span class="font-medium text-sm md:text-base">${escapeHTML(catName)}</span>
+          <div class="flex gap-3">
+            <button type="button" onclick="editCategoryName('${escapeHTML(catName).replace(/'/g, "\\'")}')" class="text-blue-400 hover:text-blue-300 text-sm font-bold transition">Edit</button>
+            <button type="button" onclick="deleteCategoryName('${escapeHTML(catName).replace(/'/g, "\\'")}')" class="text-red-400 hover:text-red-300 text-sm font-bold transition">Padam</button>
+          </div>
+        </div>
+      `;
+    });
+  }
+  
+  document.getElementById("categoryModal").classList.remove("hidden");
+}
+
+function closeCategoryModal() {
+  document.getElementById("categoryModal").classList.add("hidden");
+}
+
+async function editCategoryName(oldName) {
+  const newName = prompt(`Masukkan nama baharu untuk "${oldName}":\n\n(Ini akan turut mengemaskini semua persembahan yang menggunakan kategori ini dalam database)`, oldName);
+  if (!newName || newName.trim() === "" || newName === oldName) return;
+  
+  const finalName = newName.trim();
+
+  try {
+    const snapshot = await db.collection("performances").where("kategori", "==", oldName).get();
+    if (!snapshot.empty) {
+      const batch = db.batch();
+      snapshot.forEach(doc => {
+        batch.update(doc.ref, { kategori: finalName });
+      });
+      await batch.commit();
+    }
+
+    showToast("Kategori berjaya dikemaskini.", "success");
+    openCategoryModal(); // Segarkan senarai
+  } catch (error) {
+    console.error(error);
+    showToast("Ralat mengemaskini kategori.", "error");
+  }
+}
+
+async function deleteCategoryName(oldName) {
+  const confirmDel = confirm(`Adakah awak pasti mahu memadam kategori "${oldName}"?\n\nNota: Mana-mana persembahan yang sedang menggunakan kategori ini akan kehilangan tag kategorinya.`);
+  if (!confirmDel) return;
+
+  try {
+    const snapshot = await db.collection("performances").where("kategori", "==", oldName).get();
+    if (!snapshot.empty) {
+      const batch = db.batch();
+      snapshot.forEach(doc => {
+        batch.update(doc.ref, { kategori: "" }); // Dikosongkan di dalam DB
+      });
+      await batch.commit();
+    }
+
+    // Padam dari dropdown (hanya berkesan kepada kategori non-default / hardcoded)
+    const optionToRemove = Array.from(kategoriInput.options).find(opt => opt.value === oldName);
+    if (optionToRemove) optionToRemove.remove();
+
+    showToast("Kategori berjaya dipadam.", "success");
+    openCategoryModal(); // Segarkan senarai
+  } catch (error) {
+    console.error(error);
+    showToast("Ralat memadam kategori.", "error");
+  }
+}
 
 // =========================
 // UTILITIES
@@ -214,27 +320,27 @@ function renderList() {
       const styles = getCategoryStyles(item.kategori);
 
       htmlContent += `
-        <div class="glass rounded-2xl p-5 h-full ${styles.border}">
+        <div class="glass rounded-xl md:rounded-2xl p-4 md:p-5 h-full ${styles.border}">
 
-          <div class="flex justify-between items-start gap-4">
+          <div class="flex flex-col sm:flex-row justify-between items-start gap-3 md:gap-4">
 
-            <div>
+            <div class="w-full">
 
-              <h3 class="text-xl font-bold text-yellow-400">
+              <h3 class="text-lg md:text-xl font-bold text-yellow-400 leading-tight">
                 ${escapeHTML(item.perguruan)}
               </h3>
 
-              <p class="text-gray-300 mt-1">
+              <p class="text-gray-300 mt-1 text-sm md:text-base">
                 Guru: ${escapeHTML(item.guru)}
               </p>
 
-              <div class="flex gap-2 mt-3 flex-wrap">
+              <div class="flex gap-1.5 md:gap-2 mt-2 md:mt-3 flex-wrap">
 
-                <span class="${styles.pill} px-3 py-1 rounded-full text-sm text-white">
+                <span class="${styles.pill} px-2.5 py-1 rounded-full text-xs md:text-sm text-white">
                   ${escapeHTML(item.kategori)}
                 </span>
 
-                <span class="bg-yellow-500 text-black px-3 py-1 rounded-full text-sm font-bold">
+                <span class="bg-yellow-500 text-black px-2.5 py-1 rounded-full text-xs md:text-sm font-bold">
                   ${item.pesilat || 0} Pesilat
                 </span>
 
@@ -242,24 +348,24 @@ function renderList() {
 
               ${
                 item.catatan
-                ? `<p class="text-gray-400 mt-3">${escapeHTML(item.catatan)}</p>`
+                ? `<p class="text-gray-400 mt-2.5 md:mt-3 text-sm">${escapeHTML(item.catatan)}</p>`
                 : ""
               }
 
             </div>
 
-            <div class="flex flex-col gap-2">
+            <div class="flex flex-row sm:flex-col gap-2 w-full sm:w-auto mt-3 sm:mt-0">
 
               <button
                 onclick="editPerformance('${item.id}')"
-                class="bg-blue-600 hover:bg-blue-500 px-3 py-2 rounded-lg"
+                class="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-500 px-3 py-1.5 md:py-2 rounded-lg text-sm font-medium transition"
               >
                 Edit
               </button>
 
               <button
                 onclick="deletePerformance('${item.id}')"
-                class="bg-red-700 hover:bg-red-600 px-3 py-2 rounded-lg"
+                class="flex-1 sm:flex-none bg-red-700 hover:bg-red-600 px-3 py-1.5 md:py-2 rounded-lg text-sm font-medium transition"
               >
                 Delete
               </button>
@@ -274,7 +380,18 @@ function renderList() {
     });
 
     if (renderedCount === 0) {
-      list.innerHTML = `<div class="text-center py-10 text-gray-400 font-medium xl:col-span-2">Tiada persembahan dijumpai.</div>`;
+      if (searchQuery) {
+        // Jika senarai kosong disebabkan oleh tapisan carian
+        list.innerHTML = `
+          <div class="flex flex-col items-center justify-center py-8 md:py-10 text-yellow-500 bg-yellow-500/10 rounded-xl md:rounded-2xl border border-yellow-500/20 xl:col-span-2 text-center px-4">
+            <span class="text-3xl md:text-4xl mb-2 md:mb-3">🔍</span>
+            <p class="font-bold text-base md:text-lg">Tiada hasil padanan untuk "${escapeHTML(searchQuery)}"</p>
+            <p class="text-xs md:text-sm text-yellow-500/70 mt-1">Sila cuba kata kunci, kategori, atau ejaan yang lain.</p>
+          </div>`;
+      } else {
+        // Jika senarai kosong kerana memang tiada data dalam pangkalan data
+        list.innerHTML = `<div class="text-center py-8 md:py-10 text-gray-400 font-medium xl:col-span-2 text-sm md:text-base">Tiada persembahan dijumpai.</div>`;
+      }
     } else {
       list.innerHTML = htmlContent;
     }
