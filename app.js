@@ -276,12 +276,37 @@ function getCategoryStyles(category) {
   }
 }
 
+function playPopSound() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return; // Abaikan jika pelayar web lama
+    const audioCtx = new AudioContext();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.07);
+    
+    gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.07);
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + 0.07);
+  } catch (e) { }
+}
+
 // =========================
 // SUBMIT / UPDATE
 // =========================
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
+
+  playPopSound(); // Mainkan bunyi 'pop' apabila butang ditekan
 
   const jumlahPesilat = parseInt(pesilatInput.value);
   if (jumlahPesilat < 1) {
