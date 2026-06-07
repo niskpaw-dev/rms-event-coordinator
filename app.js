@@ -15,6 +15,7 @@ let performancesData = {}; // Cache untuk menyimpan data persembahan
 let allPerformances = []; // Menyimpan semua data untuk tapisan lokal
 let currentExportList = []; // Menyimpan senarai yang telah ditapis & disusun untuk eksport
 let searchQuery = "";
+let selectedCategoryFilter = "";
 
 const searchInput = document.getElementById("searchPerguruan");
 const clearSearchBtn = document.getElementById("clearSearchBtn");
@@ -49,6 +50,14 @@ if (clearSearchBtn) {
   });
 }
 
+const filterKategori = document.getElementById("filterKategori");
+if (filterKategori) {
+  filterKategori.addEventListener("change", (e) => {
+    selectedCategoryFilter = e.target.value;
+    renderList(); // Kemaskini senarai jika kategori dipilih
+  });
+}
+
 const sortOption = document.getElementById("sortOption");
 if (sortOption) {
   sortOption.addEventListener("change", () => {
@@ -78,6 +87,16 @@ function renderCategoryCheckboxes() {
       </label>
     `;
   });
+
+  // Turut kemas kini pilihan di dalam kotak filter carian
+  if (filterKategori) {
+    const currentFilter = filterKategori.value; // Simpan pilihan semasa (jika ada)
+    filterKategori.innerHTML = '<option value="">Semua Kategori</option>';
+    availableCategories.forEach(cat => {
+      filterKategori.innerHTML += `<option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>`;
+    });
+    filterKategori.value = currentFilter; // Pulihkan pilihan semasa
+  }
 }
 
 function addNewCategoryForm() {
@@ -369,6 +388,11 @@ function renderList() {
       // Tangani format array (baru) atau string (legacy)
       let cats = Array.isArray(item.kategori) ? item.kategori : (item.kategori ? [item.kategori] : []);
 
+      // Fungsi Tapisan (Filter) - Dropdown Kategori Khusus
+      if (selectedCategoryFilter && !cats.includes(selectedCategoryFilter)) {
+        return; // Langkau item jika tidak mengandungi kategori yang dipilih
+      }
+
       // Fungsi Tapisan (Filter)
       if (searchQuery) {
         const matchPerguruan = item.perguruan && item.perguruan.toLowerCase().includes(searchQuery);
@@ -458,12 +482,13 @@ function renderList() {
     });
 
     if (renderedCount === 0) {
-      if (searchQuery) {
+      if (searchQuery || selectedCategoryFilter) {
         // Jika senarai kosong disebabkan oleh tapisan carian
+        let message = searchQuery ? `Tiada hasil padanan untuk "${escapeHTML(searchQuery)}"` : `Tiada hasil padanan untuk kategori "${escapeHTML(selectedCategoryFilter)}"`;
         list.innerHTML = `
           <div class="flex flex-col items-center justify-center py-8 md:py-10 text-yellow-500 bg-yellow-500/10 rounded-xl md:rounded-2xl border border-yellow-500/20 xl:col-span-2 text-center px-4">
             <span class="text-3xl md:text-4xl mb-2 md:mb-3">🔍</span>
-            <p class="font-bold text-base md:text-lg">Tiada hasil padanan untuk "${escapeHTML(searchQuery)}"</p>
+            <p class="font-bold text-base md:text-lg">${message}</p>
             <p class="text-xs md:text-sm text-yellow-500/70 mt-1">Sila cuba kata kunci, kategori, atau ejaan yang lain.</p>
           </div>`;
       } else {
