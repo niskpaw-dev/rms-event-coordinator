@@ -20,8 +20,10 @@ let searchQuery = "";
 const searchInput = document.getElementById("searchPerguruan");
 const clearSearchBtn = document.getElementById("clearSearchBtn");
 
+let searchTimeout;
 if (searchInput) {
   searchInput.addEventListener("input", (e) => {
+    clearTimeout(searchTimeout);
     searchQuery = e.target.value.toLowerCase();
     
     // Tunjuk/sorok butang clear berdasarkan nilai input
@@ -33,7 +35,9 @@ if (searchInput) {
       }
     }
 
-    renderList(); // Kemaskini paparan setiap kali pengguna menaip
+    searchTimeout = setTimeout(() => {
+      renderList(); // Kemaskini paparan selepas pengguna berhenti menaip (300ms)
+    }, 300);
   });
 }
 
@@ -169,6 +173,10 @@ function escapeHTML(str) {
   }[tag] || tag));
 }
 
+function toTitleCase(str) {
+  return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+}
+
 function showToast(message, type = 'success') {
   const container = document.getElementById('toastContainer');
   if (!container) return;
@@ -210,12 +218,18 @@ function getCategoryStyles(category) {
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
+  const jumlahPesilat = parseInt(pesilatInput.value);
+  if (jumlahPesilat < 1) {
+    showToast("Jumlah pesilat mestilah sekurang-kurangnya 1 orang.", "error");
+    return;
+  }
+
   const data = {
-    guru: guruInput.value,
-    perguruan: perguruanInput.value,
+    guru: toTitleCase(guruInput.value.trim()),
+    perguruan: toTitleCase(perguruanInput.value.trim()),
     kategori: kategoriInput.value,
-    pesilat: parseInt(pesilatInput.value),
-    catatan: catatanInput.value,
+    pesilat: jumlahPesilat,
+    catatan: catatanInput.value.trim(),
   };
 
   try {
@@ -320,7 +334,7 @@ function renderList() {
       const styles = getCategoryStyles(item.kategori);
 
       htmlContent += `
-        <div class="glass rounded-xl md:rounded-2xl p-4 md:p-5 h-full ${styles.border}">
+        <div class="glass rounded-xl md:rounded-2xl p-4 md:p-5 h-full ${styles.border} hover:scale-[1.02] hover:shadow-2xl transition-all duration-300">
 
           <div class="flex flex-col sm:flex-row justify-between items-start gap-3 md:gap-4">
 
